@@ -1,0 +1,217 @@
+/* App Header */ 
+.app-header {
+  background: linear-gradient(90deg, #1976d2, #42a5f5);
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  padding: 12px 20px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* App Container Layout */
+.app-container {
+  display: flex;
+  height: calc(100vh - 56px); /* Account for header height */
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 80px;
+  background-color: #f0f4f8;
+  border-right: 1px solid #ccc;
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar-title {
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 10px;
+  font-size: 24px;
+  color: #16087d;
+}
+
+/* Shape Button Icons */
+.shape-btn {
+  width: 48px;
+  height: 48px;
+  margin: 10px 0;
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.shape-btn:hover {
+  background-color: #0aed0a;
+  transform: scale(1.1);
+}
+
+.shape-btn img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* Main Content Area */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Toolbar (Top) */
+.toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #ddd;
+  
+}
+
+.toolbar button {
+  background-color: #1976d2;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+.toolbar button:hover {
+  background-color: #a60a0a;
+}
+
+/* Drawing Canvas */
+.drawing-canvas {
+  flex: 1;
+  background-color: #ffffff;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+}
+
+/* Resize Handles */
+svg rect[fill="#f44336"]:hover {
+  stroke: #1976d2;
+  stroke-width: 2;
+}
+
+.resize-handle {
+  fill: #de665e;
+  stroke: #bd1919;
+  stroke-width: 1;
+  width: 14px !important;
+  height: 14px !important;
+  cursor: nwse-resize;
+  rx: 2;
+}
+
+.resize-handle:hover {
+  stroke: #1976d2;
+  stroke-width: 2;
+  fill: #ff7961;
+}
+
+/* SVG Canvas */
+svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  background: transparent;
+}
+
+/* ✅ Fixed Grid Overlay (Non-Zoomable & Dark) */
+.canvas-wrapper {
+  position: relative;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 1) 1px, transparent 1px);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Optional: Grid lines in SVG (should be unused now) */
+.grid-lines line {
+  stroke: #090909;
+  stroke-width:1;
+  shape-rendering: crispEdges;
+}
+/* Connection handle (black dot) */
+.conn-handle {
+  fill: black;
+  cursor: crosshair;
+  pointer-events: all;
+}
+
+.resize-handle {
+  width: 10px;
+  height: 10px;
+  fill: rgb(173, 12, 12);
+  cursor: nwse-resize;
+  pointer-events: all;
+}
+
+/* Optional hover effect */
+.conn-handle:hover {
+  fill: #333;
+  r: 6;
+}
+
+.canvas-svg {
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  cursor: default;
+}
+
+.toolbar {
+  margin-bottom: 10px;
+}
+
+svg {
+  user-select: none;
+}
+
+circle {
+  cursor: pointer;
+}
+
+path {
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+line {
+  stroke-width: 2;
+}

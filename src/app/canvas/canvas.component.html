@@ -1,0 +1,182 @@
+<!-- Hidden Inputs -->
+<input type="file" id="imageInput" style="display: none" (change)="onImageUpload($event)" />
+<input type="file" id="loadInput" style="display: none" (change)="loadDiagram($event)" />
+
+<!-- App Header -->
+<div class="app-header">Angular Paint App</div>
+
+<!-- Layout -->
+<div class="app-container">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-title">Shapes</div>
+
+    <button class="shape-btn" (click)="addShape('rect')">
+      <img src="assets/icons/rectangle.png" alt="Rectangle" />
+    </button>
+    <button class="shape-btn" (click)="addShape('square')">
+      <img src="assets/icons/square.png" alt="Square" />
+    </button>
+    <button class="shape-btn" (click)="addShape('circle')">
+      <img src="assets/icons/circle.png" alt="Circle" />
+    </button>
+    <button class="shape-btn" (click)="addShape('ellipse')">
+      <img src="assets/icons/ellipse.png" alt="Ellipse" />
+    </button>
+    <button class="shape-btn" (click)="addShape('diamond')">
+      <img src="assets/icons/diamond.png" alt="Diamond" />
+    </button>
+    <button class="shape-btn" (click)="addShape('triangle')">
+      <img src="assets/icons/triangle.png" alt="Triangle" />
+    </button>
+    <button class="shape-btn" (click)="addShape('hexagon')">
+      <img src="assets/icons/hexagon.png" alt="Hexagon" />
+    </button>
+  </div>
+
+  <!-- Main Area -->
+  <div class="main-area">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button (click)="undo()">Undo</button>
+      <button (click)="redo()">Redo</button>
+      <button (click)="deleteSelected()">Delete</button>
+      <button (click)="exportAsSVG()">Export SVG</button>
+      <button (click)="saveDiagram()">Save</button>
+      <button (click)="triggerLoad()">Load</button>
+      <button (click)="triggerImageUpload()">📷 Add Image</button>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrapper">
+
+      <svg class="drawing-canvas"
+        [attr.viewBox]="panX + ' ' + panY + ' ' + (canvasWidth / zoomLevel) + ' ' + (canvasHeight / zoomLevel)"
+        (mousedown)="onSvgMouseDown($event)" (mousemove)="onMouseMove($event)" (mouseup)="onMouseUp()"
+        (mouseleave)="onMouseUp()" (wheel)="onWheel($event)">
+        <!--<ng-container *ngFor="let conn of connections">
+           <line
+             [attr.x1]="conn.fromX"
+             [attr.y1]="conn.fromY"
+             [attr.x2]="conn.toX"
+             [attr.y2]="conn.toY"
+             stroke="black"
+             stroke-width="2"
+             marker-end="url(#arrowhead)"
+             (click)="onConnectionClick(conn)">
+            </line>
+          </ng-container>-->
+
+
+        <!-- Render All Connections as Path -->
+        <g *ngFor="let conn of connections">
+          <!-- Main connection path (clickable to select) -->
+          <path [attr.d]="getElbowPath(conn)" stroke="black" stroke-width="7" fill="none" marker-end="url(#arrowhead)"
+            style="pointer-events: stroke; cursor: pointer" (click)="onConnectionClick(conn, $event)"
+            (dblclick)="onConnectionDoubleClick(conn, $event)">
+          </path>
+
+          <!-- Highlight if selected -->
+          <path *ngIf="selectedConnection === conn" [attr.d]="getElbowPath(conn)" stroke="deepskyblue" stroke-width="7"
+            stroke-dasharray="5,5" fill="none">
+          </path>
+
+          <!-- Bend point handles (only when selected) -->
+          <ng-container *ngIf="selectedConnection === conn">
+            <circle *ngFor="let pt of conn.bendPoints || []" [attr.cx]="pt.x" [attr.cy]="pt.y" r="15" fill="deepskyblue"
+              stroke="white" style="cursor: move" (mousedown)="onBendHandleMouseDown($event, conn, pt)">
+            </circle>
+          </ng-container>
+        </g>
+
+        <!-- Preview Line While Connecting -->
+        <line style="height: 5px;" *ngIf="previewLine && connectingFrom" [attr.x1]="connectingFrom.x" [attr.y1]="connectingFrom.y"
+          [attr.x2]="previewLine.x" [attr.y2]="previewLine.y" stroke="gray" stroke-width="7" stroke-dasharray="5,5"
+          marker-end="url(#arrowhead)">
+        </line>
+
+        <!-- Arrow End Drag Handles (visible only for selected connection) -->
+        <g *ngIf="selectedConnection">
+          <!-- From-end handle -->
+          <circle r="20" fill="blue" stroke="black" [attr.cx]="selectedConnection.fromX"
+            [attr.cy]="selectedConnection.fromY"
+            (mousedown)="onConnectionHandleMouseDown($event, selectedConnection, 'from')" style="cursor: pointer">
+          </circle>
+
+          <!-- To-end handle -->
+          <circle r="20" fill="red" stroke="black" [attr.cx]="selectedConnection.toX" [attr.cy]="selectedConnection.toY"
+            (mousedown)="onConnectionHandleMouseDown($event, selectedConnection, 'to')" style="cursor: pointer">
+          </circle>
+        </g>
+
+        <!-- Marker definition for arrowhead -->
+        <defs>
+          <marker id="arrowhead" markerWidth="20" markerHeight="7" refX="10" refY="3.5" orient="auto"
+            markerUnits="strokeWidth">
+            <polygon points="0 0, 10 3.5, 0 7" fill="black" />
+          </marker>
+        </defs>
+
+
+
+
+        <!-- Render Shapes -->
+        <ng-container *ngFor="let el of elements">
+          <!-- Rect / Square -->
+          <rect *ngIf="el.type === 'rect' || el.type === 'square'" [attr.x]="el.x" [attr.y]="el.y"
+            [attr.width]="el.width" [attr.height]="el.height" fill="white" stroke="black" stroke-width="5"
+            (mousedown)="onMouseDown($event, el)" (click)="onShapeClick(el)" />
+
+          <!-- Circle -->
+          <circle *ngIf="el.type === 'circle'" [attr.cx]="el.x + el.width / 2" [attr.cy]="el.y + el.height / 2"
+            [attr.r]="getCircleRadius(el)" fill="white" stroke="#000000" stroke-width="5"
+            (mousedown)="onMouseDown($event, el)" (click)="onShapeClick(el)" />
+
+          <!-- Ellipse -->
+          <ellipse *ngIf="el.type === 'ellipse'" [attr.cx]="el.x + el.width / 2" [attr.cy]="el.y + el.height / 2"
+            [attr.rx]="el.width / 2" [attr.ry]="el.height / 2" fill="white" stroke="black" stroke-width="5"
+            (mousedown)="onMouseDown($event, el)" (click)="onShapeClick(el)" />
+
+          <!-- Polygon (diamond, triangle, hexagon) -->
+          <polygon *ngIf="el.type === 'diamond' || el.type === 'triangle' || el.type === 'hexagon'"
+            [attr.points]="getPolygonPoints(el)" fill="white" stroke="black" stroke-width="5"
+            (mousedown)="onMouseDown($event, el)" (click)="onShapeClick(el)" />
+
+          <!-- Image -->
+          <image *ngIf="el.type === 'image'" [attr.x]="el.x" [attr.y]="el.y" [attr.width]="el.width"
+            [attr.height]="el.height" [attr.href]="el.href" style="pointer-events: all; cursor: pointer"
+            (mousedown)="onMouseDown($event, el)" (click)="onShapeClick(el)" />
+
+
+          <!-- Resize Handles -->
+          <g *ngIf="selectedElement?.id === el.id">
+            <rect class="resize-handle" [attr.x]="el.x - 7" [attr.y]="el.y - 7"
+              (mousedown)="startResize($event, 'tl')" />
+            <rect class="resize-handle" [attr.x]="el.x + el.width - 5" [attr.y]="el.y - 7"
+              (mousedown)="startResize($event, 'tr')" />
+            <rect class="resize-handle" [attr.x]="el.x - 7" [attr.y]="el.y + el.height - 5"
+              (mousedown)="startResize($event, 'bl')" />
+            <rect class="resize-handle" [attr.x]="el.x + el.width - 5" [attr.y]="el.y + el.height - 5"
+              (mousedown)="startResize($event, 'br')" />
+
+            <!-- Connection Handles -->
+            <!-- Connection handles (drag from here to connect shapes) -->
+            <circle class="conn-handle" r="12" [attr.cx]="el.x + el.width / 2" [attr.cy]="el.y"
+              (mousedown)="startConnectionDrag($event, el, 'top')" />
+
+            <circle class="conn-handle" r="12" [attr.cx]="el.x + el.width" [attr.cy]="el.y + el.height / 2"
+              (mousedown)="startConnectionDrag($event, el, 'right')" />
+
+            <circle class="conn-handle" r="12" [attr.cx]="el.x + el.width / 2" [attr.cy]="el.y + el.height"
+              (mousedown)="startConnectionDrag($event, el, 'bottom')" />
+
+
+            <circle class="conn-handle" r="12" [attr.cx]="el.x" [attr.cy]="el.y + el.height / 2"
+              (mousedown)="startConnectionDrag($event, el, 'left')" />
+
+          </g>
+        </ng-container>
+      </svg>
+    </div>
+  </div>
+</div>
