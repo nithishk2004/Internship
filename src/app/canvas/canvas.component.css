@@ -215,3 +215,53 @@ path {
 line {
   stroke-width: 2;
 }
+.shape-btn {
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+.shape-btn img {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.tooltip {
+  font-size: 10px;
+  color: #333;
+}
+.sidebar {
+  width: 100px;               /* or your existing width */
+  height: calc(100vh - 60px); /* adjust based on your header height */
+  overflow-y: auto;           /* enables vertical scrollbar */
+  overflow-x: hidden;         /* disable horizontal scroll */
+  background-color: #f0f0f0;
+  padding: 10px;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+.shape-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 90px;
+  height: 70px;
+  margin-bottom: 10px;  
+  border: none;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+.shape-btn img {
+  width: 40px;
+  height: 30px;
+}
+.shape-label {
+  font-size: 28px;
+  font-weight: bold;
+  fill: black;
+  pointer-events: none;
+}

@@ -1,7 +1,10 @@
 import { Component } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
-type ShapeType = 'rect' | 'square' | 'circle' | 'ellipse' | 'diamond' | 'triangle' | 'hexagon' | 'image';
+
+type ShapeType = 'rect' | 'square' | 'circle' | 'ellipse' | 'diamond' | 'triangle' | 'hexagon' | 'image'|
+'voltmeter'|'Ammeter';
 
 interface ElementShape {
   id: string;
@@ -11,6 +14,11 @@ interface ElementShape {
   width: number;
   height: number;
   href?: string;
+  label?: string;             // 🆕 Main label (inside)
+  externalLabel?: string;     // 🆕 Additional external label (outside)
+  //externalLabelPosition?: 'top' | 'bottom' | 'left' | 'right';  // 🆕 Label direction
+  externalLabelX?: number;
+  externalLabelY?: number;
 }
 
 interface Connection {
@@ -22,21 +30,41 @@ interface Connection {
   toY?: number;
   bendPoints?: { x: number, y: number }[]; 
 }
+interface FreeText {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+}
+
 
 
 @Component({
   selector: 'app-canvas',
   standalone: true,
-  imports: [CommonModule],
+  //imports: [CommonModule],
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.css'],
+  imports: [
+    CommonModule,
+    FormsModule
+     ]
 })
 export class CanvasComponent {
 
+ freeTexts: FreeText[] = [];
+selectedText: FreeText | null = null;
+draggingText = false;
+textOffsetX = 0;
+textOffsetY = 0;
+
+editingTextId: string | null = null;
 
   elements: ElementShape[] = [];
   connections: Connection[] = [];
   selectedElement: ElementShape | null = null;
+
+  externalLabelDragData: { element: ElementShape, offsetX: number, offsetY: number } | null = null;
 
   connectingFrom: { x: number; y: number; elementId: string } | null = null;
   previewLine: { x: number; y: number } | null = null;
@@ -68,6 +96,15 @@ export class CanvasComponent {
   private redoStack: { elements: ElementShape[]; connections: Connection[] }[] = [];
 
 draggingBendPoint: { conn: Connection; point: { x: number; y: number } } | null = null;
+
+onExternalLabelMouseDown(event: MouseEvent, el: ElementShape) {
+  event.stopPropagation();
+  const svgPt = this.getCursorSVGPosition(event);
+  const offsetX = svgPt.x - (el.externalLabelX ?? this.getExternalLabelX(el));
+  const offsetY = svgPt.y - (el.externalLabelY ?? this.getExternalLabelY(el));
+  this.externalLabelDragData = { element: el, offsetX, offsetY };
+}
+
 
   constructor(){
     console.log("hi")
@@ -131,6 +168,11 @@ draggingBendPoint: { conn: Connection; point: { x: number; y: number } } | null 
       case 'image':
         width = height = 100;
         break;
+    case 'voltmeter':
+      case 'Ammeter':
+      width = 300;
+      height = 300;
+      break;
       case 'diamond':
       case 'triangle':
       case 'hexagon':
@@ -151,6 +193,11 @@ draggingBendPoint: { conn: Connection; point: { x: number; y: number } } | null 
       y: 100,
       width,
       height,
+      label: type,  // default inside text
+      externalLabel: '', // empty by default
+      externalLabelX: 100 + width + 20,
+      externalLabelY: 100 + height / 2,
+      //externalLabelPosition: 'bottom'
     };
   
     this.elements.push(shape);
@@ -185,7 +232,7 @@ draggingBendPoint: { conn: Connection; point: { x: number; y: number } } | null 
         y: 100,
         width: 100,
         height: 100,
-        href: reader.result as string,
+        href: reader.result as string, 
       };
       this.elements.push(imgShape);
     };
@@ -199,14 +246,18 @@ draggingBendPoint: { conn: Connection; point: { x: number; y: number } } | null 
 
 
   onMouseDown(event: MouseEvent, el: ElementShape) {
-    event.stopPropagation();
-    this.selectedElement = el;
-    this.dragging = true;
-    const svgPt = this.getCursorSVGPosition(event);
-    this.offsetX = el.width / 2;
-    this.offsetY = el.height / 2;
+  event.stopPropagation();
+  this.selectedElement = el;
+  this.dragging = true;
 
-  }
+  // Get actual mouse position in SVG coordinates
+  const svgPt = this.getCursorSVGPosition(event);
+
+  // Calculate the offset from the shape's top-left corner
+  this.offsetX = svgPt.x - el.x;
+  this.offsetY = svgPt.y - el.y;
+}
+
   onBendHandleMouseDown(event: MouseEvent, conn: Connection, pt: { x: number, y: number }) {
   event.stopPropagation();
   this.draggingBendPoint = { conn, point: pt };
@@ -232,6 +283,31 @@ onConnectionDoubleClick(conn: Connection, event: MouseEvent) {
   this.saveState();
 }
 
+getExternalLabelX(el: any): number {
+  const offset = 100;
+  switch (el.externalLabelPosition) {
+    case 'left':
+      return el.x - offset;
+    case 'right':
+      return el.x + el.width + offset;
+    default:
+      return el.x + el.width / 2;
+  }
+}
+
+getExternalLabelY(el: any): number {
+  const offset = 15;
+  switch (el.externalLabelPosition) {
+    case 'top':
+      return el.y - offset;
+    case 'bottom':
+      return el.y + el.height + offset;
+    default:
+      return el.y + el.height / 2;
+  }
+}
+
+
 
 
   onMouseMove(event: MouseEvent) {
@@ -248,6 +324,15 @@ onConnectionDoubleClick(conn: Connection, event: MouseEvent) {
   pt.x = event.clientX;
   pt.y = event.clientY;
   const cursor = pt.matrixTransform(svg.getScreenCTM()!.inverse());
+
+  if (this.externalLabelDragData) {
+  const svgPt = this.getCursorSVGPosition(event);
+  const { element, offsetX, offsetY } = this.externalLabelDragData;
+  element.externalLabelX = svgPt.x - offsetX;
+  element.externalLabelY = svgPt.y - offsetY;
+  return;
+}
+
    if (this.selectedConnection && this.draggingArrowEnd) {
   const connIndex = this.connections.indexOf(this.selectedConnection);
   if (connIndex !== -1) {
@@ -338,6 +423,14 @@ if (this.draggingBendPoint) {
     this.panY += dy;
     this.panStart = { x: event.clientX, y: event.clientY };
   }
+  
+  if (this.draggingText && this.selectedText) {
+  const svgPos = this.getCursorSVGPosition(event);
+  this.selectedText.x = svgPos.x - this.textOffsetX;
+  this.selectedText.y = svgPos.y - this.textOffsetY;
+  return;
+}
+
 }
 
 
@@ -383,6 +476,10 @@ if (this.draggingBendPoint) {
   this.saveState(); // Optional, for undo support
   this.draggingBendPoint = null;
 }
+if (this.draggingText) {
+  this.draggingText = false;
+}
+
 
 
   this.connectingFrom = null;
@@ -392,6 +489,8 @@ if (this.draggingBendPoint) {
   this.panning = false;
   this.resizeCorner = null;
   this.draggingArrowEnd = null;
+  this.externalLabelDragData = null;
+
   
 }
 
@@ -456,6 +555,35 @@ getElbowPath(conn: Connection): string {
     this.panStart = { x: event.clientX, y: event.clientY };
   }
 }
+
+addFreeText() {
+  const newText: FreeText = {
+    id: crypto.randomUUID(),
+    x: 100,
+    y: 100,
+    text: 'New Text'
+  };
+  this.freeTexts.push(newText);
+  this.selectedText = newText;
+}
+
+onFreeTextMouseDown(event: MouseEvent, text: FreeText) {
+  event.stopPropagation();
+  this.selectedText = text;
+  this.draggingText = true;
+  const svgPos = this.getCursorSVGPosition(event);
+  this.textOffsetX = svgPos.x - text.x;
+  this.textOffsetY = svgPos.y - text.y;
+}
+enableTextEditing(t: FreeText) {
+  this.selectedText = t;
+  this.editingTextId = t.id;
+}
+
+stopTextEditing() {
+  this.editingTextId = null;
+}
+
 
   onWheel(event: WheelEvent) {
     event.preventDefault();
@@ -558,6 +686,9 @@ getElementAtPosition(x: number, y: number): ElementShape | null {
 }
 
   exportAsSVG() {
+
+    console.log(this.elements.filter(e => e.type === 'image'));
+
     const svgEl = document.querySelector('svg');
     if (!svgEl) return;
 
@@ -568,13 +699,14 @@ getElementAtPosition(x: number, y: number): ElementShape | null {
     clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     clonedSvg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
 
-    const images = clonedSvg.querySelectorAll('image');
-    images.forEach((img: SVGImageElement) => {
-      const href = img.getAttribute('href') || img.getAttribute('xlink:href');
-      if (href) {
-        img.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', href);
-      }
-    });
+   const images = clonedSvg.querySelectorAll('image');
+  images.forEach((img: SVGImageElement) => {
+    const href = img.getAttribute('href');
+    if (href && href.startsWith('data:image')) {
+      img.setAttribute('href', href); // Or xlink:href if needed
+      img.removeAttribute('href'); 
+    }
+  });
 
     const serializer = new XMLSerializer();
     const source = serializer.serializeToString(clonedSvg);
@@ -615,13 +747,15 @@ getElementAtPosition(x: number, y: number): ElementShape | null {
     };
     reader.readAsText(file);
   }
-  getCursorSVGPosition(event: MouseEvent): { x: number, y: number } {
+  getCursorSVGPosition(event: MouseEvent): { x: number; y: number } {
   const svg = (event.target as Element).closest('svg') as SVGSVGElement;
   const pt = svg.createSVGPoint();
   pt.x = event.clientX;
   pt.y = event.clientY;
-  return pt.matrixTransform(svg.getScreenCTM()!.inverse());
+  const cursorpt = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+  return { x: cursorpt.x, y: cursorpt.y };
 }
+
 getShapeNear(x: number, y: number, threshold: number) {
   return this.elements.find(el =>
     Math.abs(x - (el.x + el.width / 2)) < el.width / 2 + threshold &&

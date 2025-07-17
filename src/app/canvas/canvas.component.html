@@ -1,3 +1,6 @@
+new html
+
+
 <!-- Hidden Inputs -->
 <input type="file" id="imageInput" style="display: none" (change)="onImageUpload($event)" />
 <input type="file" id="loadInput" style="display: none" (change)="loadDiagram($event)" />
@@ -10,34 +13,51 @@
   <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-title">Shapes</div>
-
     <button class="shape-btn" (click)="addShape('rect')">
       <img src="assets/icons/rectangle.png" alt="Rectangle" />
+      <span class="tooltip">rectangle</span>
     </button>
     <button class="shape-btn" (click)="addShape('square')">
       <img src="assets/icons/square.png" alt="Square" />
+      <span class="tooltip">square</span>
     </button>
     <button class="shape-btn" (click)="addShape('circle')">
       <img src="assets/icons/circle.png" alt="Circle" />
+      <span class="tooltip">circle</span>
     </button>
     <button class="shape-btn" (click)="addShape('ellipse')">
       <img src="assets/icons/ellipse.png" alt="Ellipse" />
+      <span class="tooltip">ellipse</span>
     </button>
     <button class="shape-btn" (click)="addShape('diamond')">
       <img src="assets/icons/diamond.png" alt="Diamond" />
+      <span class="tooltip">diamond</span>
     </button>
     <button class="shape-btn" (click)="addShape('triangle')">
       <img src="assets/icons/triangle.png" alt="Triangle" />
+      <span class="tooltip">triangle</span>
     </button>
     <button class="shape-btn" (click)="addShape('hexagon')">
       <img src="assets/icons/hexagon.png" alt="Hexagon" />
+      <span class="tooltip">hexagon</span>
+      </button>
+       <button class="shape-btn" (click)="addShape('voltmeter')">
+      <img src="assets/icons/Voltmeter.png" alt="voltmeter" />
+      <span class="tooltip">voltmeter</span>
     </button>
+    <button class="shape-btn" (click)="addShape('Ammeter')">
+      <img src="assets\icons\Ammeter.png" alt="Ammeter" />
+      <span class="tooltip">Ammeter</span>
+      </button>
   </div>
+  
+
 
   <!-- Main Area -->
   <div class="main-area">
     <!-- Toolbar -->
     <div class="toolbar">
+      <button (click)="addFreeText()">Add Text</button>
       <button (click)="undo()">Undo</button>
       <button (click)="redo()">Redo</button>
       <button (click)="deleteSelected()">Delete</button>
@@ -46,6 +66,24 @@
       <button (click)="triggerLoad()">Load</button>
       <button (click)="triggerImageUpload()">📷 Add Image</button>
     </div>
+
+    <div *ngIf="selectedElement" class="label-editor">
+      <label>Inside Text:
+        <input type="text" [(ngModel)]="selectedElement.label" />
+      </label>
+      <label>Outside Text:
+        <input type="text" [(ngModel)]="selectedElement.externalLabel" />
+      </label>
+      <!--<label>Outside Position:
+    <select [(ngModel)]="selectedElement.externalLabelPosition">
+      <option value="top">Top</option>
+      <option value="bottom">Bottom</option>
+      <option value="left">Left</option>
+      <option value="right">Right</option>
+    </select>
+    </label>-->
+    </div>
+
 
     <!-- Canvas -->
     <div class="canvas-wrapper">
@@ -90,9 +128,9 @@
         </g>
 
         <!-- Preview Line While Connecting -->
-        <line style="height: 5px;" *ngIf="previewLine && connectingFrom" [attr.x1]="connectingFrom.x" [attr.y1]="connectingFrom.y"
-          [attr.x2]="previewLine.x" [attr.y2]="previewLine.y" stroke="gray" stroke-width="7" stroke-dasharray="5,5"
-          marker-end="url(#arrowhead)">
+        <line style="height: 5px;" *ngIf="previewLine && connectingFrom" [attr.x1]="connectingFrom.x"
+          [attr.y1]="connectingFrom.y" [attr.x2]="previewLine.x" [attr.y2]="previewLine.y" stroke="gray"
+          stroke-width="7" stroke-dasharray="5,5" marker-end="url(#arrowhead)">
         </line>
 
         <!-- Arrow End Drag Handles (visible only for selected connection) -->
@@ -116,8 +154,6 @@
             <polygon points="0 0, 10 3.5, 0 7" fill="black" />
           </marker>
         </defs>
-
-
 
 
         <!-- Render Shapes -->
@@ -148,6 +184,35 @@
             (mousedown)="onMouseDown($event, el)" (click)="onShapeClick(el)" />
 
 
+<image *ngIf="el.type === 'voltmeter'" [attr.x]="el.x" [attr.y]="el.y" [attr.width]="el.width"
+            [attr.height]="el.height" href="assets/icons/Voltmeter.png" (mousedown)="onMouseDown($event, el)"
+            (click)="onShapeClick(el)" />
+            <image *ngIf="el.type === 'Ammeter'" [attr.x]="el.x" [attr.y]="el.y" [attr.width]="el.width"
+            [attr.height]="el.height" href="assets\icons\Ammeter.png" (mousedown)="onMouseDown($event, el)"
+            (click)="onShapeClick(el)" />
+
+
+
+
+          <!-- Text inside the shape -->
+          <text *ngIf="el.label" [attr.x]="el.x + el.width / 2" [attr.y]="el.y + el.height / 2"
+            dominant-baseline="middle" text-anchor="middle" font-size="40" fill="black">
+            {{ el.label }}
+          </text>
+
+          <!-- Text outside the shape -->
+          <text *ngIf="el.externalLabel" [attr.x]="el.externalLabelX" [attr.y]="el.externalLabelY" font-size="70"
+            font-weight="bold" fill="black" (mousedown)="onExternalLabelMouseDown($event, el)">
+            {{ el.externalLabel }}
+          </text>
+
+          <ng-container *ngFor="let t of freeTexts">
+            <text *ngIf="editingTextId !== t.id" [attr.x]="t.x" [attr.y]="t.y" font-size="90" fill="black"
+              (dblclick)="enableTextEditing(t)" (mousedown)="onFreeTextMouseDown($event, t)">
+              {{ t.text }}
+            </text>
+          </ng-container>
+
           <!-- Resize Handles -->
           <g *ngIf="selectedElement?.id === el.id">
             <rect class="resize-handle" [attr.x]="el.x - 7" [attr.y]="el.y - 7"
@@ -177,6 +242,15 @@
           </g>
         </ng-container>
       </svg>
+      <!-- Text editing input box for free-floating text -->
+<div *ngIf="editingTextId" style="margin-top: 10px;">
+  <input [(ngModel)]="selectedText!.text"
+         (blur)="stopTextEditing()"
+         (keydown.enter)="stopTextEditing()"
+         placeholder="Edit text and press Enter"
+         autofocus />
+</div>
+
     </div>
   </div>
 </div>
